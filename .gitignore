@@ -1,0 +1,26 @@
+# OS / エディタの一時ファイル
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
+# 環境変数・秘密ファイル（本アプリでは使わないが念のため）
+.env
+.env.*
+*.key
+*.pem
+*.p12
+secrets.json
+credentials.json
+
+# ログ・一時ファイル
+*.log
+*.tmp
+*.bak
+
+# Node 系（このプロジェクトでは未使用だが防御として）
+node_modules/
+npm-debug.log*
+yarn-error.log

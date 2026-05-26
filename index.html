@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https://flagcdn.com data:; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#ffd86b">
+  <title>こっきクイズ</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <h1 class="title">こっきクイズ</h1>
+    </header>
+
+    <section class="flag-area" aria-live="polite">
+      <div class="flag-frame">
+        <img id="flag" class="flag" alt="こっき" decoding="async">
+        <div id="flag-fallback" class="flag-fallback" hidden>こっきを よみこめませんでした</div>
+      </div>
+    </section>
+
+    <section class="answer-area" id="answer-area" hidden>
+      <div class="answer-row">
+        <span class="answer-label">くに</span>
+        <span class="answer-text" id="country-name"></span>
+      </div>
+      <div class="answer-row">
+        <span class="answer-label">しゅと</span>
+        <span class="answer-text" id="capital-name"></span>
+      </div>
+    </section>
+
+    <section class="controls">
+      <button type="button" id="reveal-btn" class="btn btn-primary">こたえは？</button>
+      <button type="button" id="next-btn" class="btn btn-next" hidden>つぎの くに</button>
+    </section>
+
+    <div class="confetti" id="confetti" aria-hidden="true"></div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
