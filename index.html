@@ -13,6 +13,10 @@
   <main class="app">
     <header class="header">
       <h1 class="title">こっきクイズ</h1>
+      <nav class="tabs" role="tablist" aria-label="モードきりかえ">
+        <button type="button" id="tab-all" class="tab is-active" role="tab" aria-selected="true" data-mode="all">ぜんぶ</button>
+        <button type="button" id="tab-review" class="tab" role="tab" aria-selected="false" data-mode="review" disabled>ふくしゅう <span class="badge" id="review-badge">0</span></button>
+      </nav>
     </header>
 
     <section class="flag-area" aria-live="polite">
@@ -35,10 +39,27 @@
 
     <section class="controls">
       <button type="button" id="reveal-btn" class="btn btn-primary">こたえは？</button>
-      <button type="button" id="next-btn" class="btn btn-next" hidden>つぎの くに</button>
+      <div class="judgment-row" id="judgment-row" hidden>
+        <button type="button" id="known-btn" class="btn btn-known">
+          <span class="btn-icon" aria-hidden="true">◯</span>
+          <span class="btn-label">わかった！</span>
+        </button>
+        <button type="button" id="again-btn" class="btn btn-again">
+          <span class="btn-icon" aria-hidden="true">？</span>
+          <span class="btn-label">もういちど</span>
+        </button>
+      </div>
     </section>
 
     <div class="confetti" id="confetti" aria-hidden="true"></div>
+
+    <div class="celebrate" id="celebrate" role="dialog" aria-modal="true" aria-labelledby="celebrate-msg" hidden>
+      <div class="celebrate-card">
+        <div class="celebrate-emoji" aria-hidden="true">🎉</div>
+        <p class="celebrate-msg" id="celebrate-msg">すごい！<br>ぜんぶ おぼえたね！</p>
+        <button type="button" id="celebrate-close" class="btn btn-primary">もどる</button>
+      </div>
+    </div>
   </main>
 
   <script src="app.js"></script>
