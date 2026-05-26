@@ -55,9 +55,147 @@ body {
   min-height: 100dvh;
 }
 
+.quiz-screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ---------- ホーム画面 ---------- */
+.home-screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 0 32px;
+}
+
+.home-content {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+}
+
+.title-home {
+  font-size: clamp(36px, 10vw, 56px);
+  text-align: center;
+  margin: 0 0 8px;
+  color: #d35a3a;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 0 #fff, 0 4px 0 rgba(0,0,0,0.05);
+}
+
+.home-sub {
+  text-align: center;
+  font-size: clamp(16px, 4vw, 19px);
+  color: var(--text-soft);
+  margin: 0 0 28px;
+}
+
+.btn-start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 18px 18px;
+  min-height: 96px;
+  text-align: left;
+  color: #fff;
+  letter-spacing: 0;
+}
+
+.btn-start[disabled] {
+  opacity: 0.42;
+  cursor: not-allowed;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.btn-start[disabled]:active {
+  transform: none;
+}
+
+.btn-start-all {
+  background: var(--primary);
+}
+.btn-start-all:not([disabled]):active {
+  background: var(--primary-press);
+}
+
+.btn-start-review {
+  background: var(--known);
+}
+.btn-start-review:not([disabled]):active {
+  background: var(--known-press);
+}
+
+.start-emoji {
+  font-size: 40px;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.start-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+  flex: 1 1 auto;
+}
+
+.start-line1 {
+  font-size: clamp(24px, 6.2vw, 30px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.start-line2 {
+  font-size: clamp(13px, 3.4vw, 16px);
+  font-weight: 600;
+  opacity: 0.92;
+  margin-top: 2px;
+}
+
+.home-hint {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-soft);
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+/* ---------- ヘッダー内のホームボタン ---------- */
 .header {
   text-align: center;
   padding: 8px 0 12px;
+  position: relative;
+}
+
+.home-btn {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  appearance: none;
+  border: 0;
+  background: rgba(0,0,0,0.07);
+  color: var(--text);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: background 0.15s ease, transform 0.08s ease;
+}
+
+.home-btn:active {
+  background: rgba(0,0,0,0.14);
+  transform: translateY(1px) scale(0.98);
 }
 
 .title {

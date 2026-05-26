@@ -6,6 +6,8 @@
   const STORAGE_KEY = 'kokki-quiz:review:v1';
   const CONFETTI_COLORS = ['#ff7a59', '#ffd86b', '#4dc1ff', '#7be38b', '#c98bff', '#ff8fb1'];
 
+  // クイズ画面
+  const $quizScreen = document.getElementById('quiz-screen');
   const $flag = document.getElementById('flag');
   const $flagFallback = document.getElementById('flag-fallback');
   const $answerArea = document.getElementById('answer-area');
@@ -21,6 +23,15 @@
   const $reviewBadge = document.getElementById('review-badge');
   const $celebrate = document.getElementById('celebrate');
   const $celebrateClose = document.getElementById('celebrate-close');
+  const $homeBtn = document.getElementById('home-btn');
+
+  // ホーム画面
+  const $homeScreen = document.getElementById('home-screen');
+  const $startAllBtn = document.getElementById('start-all-btn');
+  const $startReviewBtn = document.getElementById('start-review-btn');
+  const $homeAllCount = document.getElementById('home-all-count');
+  const $homeReviewCount = document.getElementById('home-review-count');
+  const $homeReviewHint = document.getElementById('home-review-hint');
 
   const state = {
     countries: [],
@@ -28,6 +39,7 @@
     history: [],
     mode: 'all',
     reviewSet: new Set(),
+    countriesLoaded: false,
   };
 
   // ---------- データ読み込み ----------
@@ -40,6 +52,7 @@
         throw new Error('countries.json が空です');
       }
       state.countries = data;
+      state.countriesLoaded = true;
     } catch (err) {
       showLoadError();
       throw err;
@@ -51,6 +64,7 @@
     $flagFallback.hidden = false;
     $flag.hidden = true;
     $revealBtn.disabled = true;
+    $startAllBtn.disabled = true;
   }
 
   // ---------- 復習リストの永続化 ----------
@@ -100,7 +114,7 @@
     return picked;
   }
 
-  // ---------- UI 更新 ----------
+  // ---------- 国旗表示 ----------
   function showFlag(country) {
     $flagFallback.hidden = true;
     $flag.hidden = false;
@@ -115,6 +129,20 @@
     $flagFallback.hidden = false;
   }
 
+  // ---------- ホーム画面 UI ----------
+  function updateHomeUI() {
+    const allCount = state.countries.length;
+    const reviewCount = state.reviewSet.size;
+    $homeAllCount.textContent = allCount > 0 ? String(allCount) : '…';
+    $homeReviewCount.textContent = String(reviewCount);
+
+    $startAllBtn.disabled = !state.countriesLoaded;
+    $startReviewBtn.disabled = !state.countriesLoaded || reviewCount === 0;
+
+    $homeReviewHint.hidden = reviewCount > 0;
+  }
+
+  // ---------- クイズ画面 UI ----------
   function updateTabsUI() {
     const count = state.reviewSet.size;
     $reviewBadge.textContent = String(count);
@@ -125,6 +153,28 @@
     $tabReview.classList.toggle('is-active', state.mode === 'review');
     $tabReview.setAttribute('aria-selected', state.mode === 'review' ? 'true' : 'false');
     $tabReview.disabled = (count === 0 && state.mode !== 'review');
+  }
+
+  // ---------- 画面切替 ----------
+  function showHome() {
+    $homeScreen.hidden = false;
+    $quizScreen.hidden = true;
+    $celebrate.hidden = true;
+    state.current = null;
+    state.history = [];
+    updateHomeUI();
+  }
+
+  function startQuiz(mode) {
+    if (!state.countriesLoaded) return;
+    if (mode === 'review' && state.reviewSet.size === 0) return;
+
+    state.mode = mode;
+    state.history = [];
+    $homeScreen.hidden = true;
+    $quizScreen.hidden = false;
+    updateTabsUI();
+    nextQuestion();
   }
 
   // ---------- メインフロー ----------
@@ -146,10 +196,7 @@
 
   function nextQuestion() {
     const picked = pickRandomCountry();
-    if (!picked) {
-      // 通常は到達しない（'all' モードに自動戻しのため）
-      return;
-    }
+    if (!picked) return;
     state.current = picked;
 
     $answerArea.hidden = true;
@@ -165,18 +212,14 @@
   function handleKnown() {
     if (!state.current) return;
     const iso2 = state.current.iso2;
-    const wasInReview = state.reviewSet.has(iso2);
     state.reviewSet.delete(iso2);
     saveReviewSet();
     updateTabsUI();
 
-    // 復習モードで全てクリアした場合のお祝い
     if (state.mode === 'review' && state.reviewSet.size === 0) {
       showCelebration();
       return;
     }
-
-    // 復習モードで残りがある、または通常モード
     nextQuestion();
   }
 
@@ -205,10 +248,8 @@
 
   function closeCelebration() {
     $celebrate.hidden = true;
-    state.mode = 'all';
-    state.history = [];
-    updateTabsUI();
-    nextQuestion();
+    // お祝い後はホーム画面に戻す
+    showHome();
   }
 
   // ---------- 紙吹雪 ----------
@@ -238,11 +279,17 @@
 
   // ---------- イベント ----------
   function bindEvents() {
+    $startAllBtn.addEventListener('click', () => startQuiz('all'));
+    $startReviewBtn.addEventListener('click', () => startQuiz('review'));
+    $homeBtn.addEventListener('click', showHome);
+
     $revealBtn.addEventListener('click', revealAnswer);
     $knownBtn.addEventListener('click', handleKnown);
     $againBtn.addEventListener('click', handleAgain);
+
     $tabAll.addEventListener('click', () => setMode('all'));
     $tabReview.addEventListener('click', () => setMode('review'));
+
     $celebrateClose.addEventListener('click', closeCelebration);
     $flag.addEventListener('error', handleFlagError);
   }
@@ -251,10 +298,13 @@
   async function init() {
     bindEvents();
     state.reviewSet = loadReviewSet();
-    updateTabsUI();
+
+    // 起動時はホーム画面を表示（カウントは「…」で開始）
+    showHome();
+
     await loadCountries();
 
-    // 起動後、保存済み iso2 のうち未登録のものを除去（データ更新に追従）
+    // 保存済み iso2 のうち未登録のものを除去（データ更新追従）
     const validIso2 = new Set(state.countries.map(c => c.iso2));
     let dirty = false;
     for (const iso2 of Array.from(state.reviewSet)) {
@@ -263,12 +313,11 @@
         dirty = true;
       }
     }
-    if (dirty) {
-      saveReviewSet();
-      updateTabsUI();
-    }
+    if (dirty) saveReviewSet();
 
-    nextQuestion();
+    // 読み込み完了後にホームのカウント表示・ボタン状態を更新
+    updateHomeUI();
+    updateTabsUI();
   }
 
   init().catch(err => {

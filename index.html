@@ -11,7 +11,38 @@
 </head>
 <body>
   <main class="app">
+    <!-- ホーム画面 -->
+    <section class="home-screen" id="home-screen" aria-labelledby="home-title">
+      <div class="home-content">
+        <h1 class="title-home" id="home-title">こっきクイズ</h1>
+        <p class="home-sub">あそびかたを えらんでね</p>
+
+        <button type="button" id="start-all-btn" class="btn btn-start btn-start-all">
+          <span class="start-emoji" aria-hidden="true">🌍</span>
+          <span class="start-text">
+            <span class="start-line1">スタート</span>
+            <span class="start-line2">ぜんぶ・<span id="home-all-count">…</span>もん</span>
+          </span>
+        </button>
+
+        <button type="button" id="start-review-btn" class="btn btn-start btn-start-review" disabled>
+          <span class="start-emoji" aria-hidden="true">📖</span>
+          <span class="start-text">
+            <span class="start-line1">スタート</span>
+            <span class="start-line2">ふくしゅう・<span id="home-review-count">0</span>もん</span>
+          </span>
+        </button>
+
+        <p class="home-hint" id="home-review-hint">「もういちど」を おしたくにが ここに たまるよ</p>
+      </div>
+    </section>
+
+    <!-- クイズ画面 -->
+    <div class="quiz-screen" id="quiz-screen" hidden>
     <header class="header">
+      <button type="button" id="home-btn" class="home-btn" aria-label="ホームへ もどる">
+        <span aria-hidden="true">←</span> ホーム
+      </button>
       <h1 class="title">こっきクイズ</h1>
       <nav class="tabs" role="tablist" aria-label="モードきりかえ">
         <button type="button" id="tab-all" class="tab is-active" role="tab" aria-selected="true" data-mode="all">ぜんぶ</button>
@@ -50,6 +81,7 @@
         </button>
       </div>
     </section>
+    </div><!-- /.quiz-screen -->
 
     <div class="confetti" id="confetti" aria-hidden="true"></div>
 
