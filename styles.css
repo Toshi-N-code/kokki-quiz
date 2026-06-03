@@ -345,6 +345,12 @@ body {
   word-break: keep-all;
 }
 
+.answer-text-sub {
+  font-size: clamp(20px, 5vw, 28px);
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
 .controls {
   display: flex;
   flex-direction: column;

@@ -5,6 +5,14 @@
   const HISTORY_SIZE = 30;
   const STORAGE_KEY = 'kokki-quiz:review:v1';
   const CONFETTI_COLORS = ['#ff7a59', '#ffd86b', '#4dc1ff', '#7be38b', '#c98bff', '#ff8fb1'];
+  const REGION_LABELS = {
+    'asia': 'アジア',
+    'europe': 'ヨーロッパ',
+    'north-america': '北（きた）アメリカ',
+    'south-america': '南（みなみ）アメリカ',
+    'africa': 'アフリカ',
+    'oceania': 'オセアニア',
+  };
 
   // クイズ画面
   const $quizScreen = document.getElementById('quiz-screen');
@@ -13,6 +21,7 @@
   const $answerArea = document.getElementById('answer-area');
   const $countryName = document.getElementById('country-name');
   const $capitalName = document.getElementById('capital-name');
+  const $regionName = document.getElementById('region-name');
   const $revealBtn = document.getElementById('reveal-btn');
   const $judgmentRow = document.getElementById('judgment-row');
   const $knownBtn = document.getElementById('known-btn');
@@ -182,6 +191,7 @@
     if (!state.current) return;
     $countryName.textContent = state.current.name;
     $capitalName.textContent = state.current.capital;
+    $regionName.textContent = REGION_LABELS[state.current.region] || '';
     $answerArea.hidden = false;
     $revealBtn.hidden = true;
     $judgmentRow.hidden = false;
@@ -202,6 +212,7 @@
     $answerArea.hidden = true;
     $countryName.textContent = '';
     $capitalName.textContent = '';
+    $regionName.textContent = '';
     $revealBtn.hidden = false;
     $judgmentRow.hidden = true;
     $revealBtn.focus({ preventScroll: true });
