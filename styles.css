@@ -351,6 +351,64 @@ body {
   color: var(--text-soft);
 }
 
+/* ---------- 世界地図エリア ---------- */
+.map-area {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed #eee;
+  width: 100%;
+  /* viewBox 1010 x 666 ≈ 3:2 */
+  aspect-ratio: 1010 / 666;
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #eaf4fb;
+}
+
+.map-area svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.map-area svg path {
+  fill: #c7dff0;
+  stroke: #ffffff;
+  stroke-width: 0.4;
+  vector-effect: non-scaling-stroke;
+  transition: fill 0.2s ease;
+}
+
+.map-area svg path.is-selected {
+  fill: var(--primary);
+  stroke: #fff;
+  stroke-width: 0.8;
+}
+
+.map-area svg circle.country-marker {
+  fill: var(--primary);
+  stroke: #fff;
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: pulse-marker 1.1s ease-in-out infinite;
+}
+
+@keyframes pulse-marker {
+  0%   { transform: scale(1);   opacity: 1; }
+  50%  { transform: scale(1.6); opacity: 0.65; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+.map-area.is-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
 .controls {
   display: flex;
   flex-direction: column;

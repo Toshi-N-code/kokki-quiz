@@ -13,6 +13,11 @@
     'africa': 'アフリカ',
     'oceania': 'オセアニア',
   };
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  // bbox の面積がこの値以下なら、丸マーカーで強調表示する（viewBox 1010x666 上の単位）
+  // モバイル画面では小〜中の国でも視認しにくいので、ある程度大きめの閾値で多めにマーカー
+  const TINY_BBOX_AREA = 800;
+  const MARKER_RADIUS = 12;
 
   // クイズ画面
   const $quizScreen = document.getElementById('quiz-screen');
@@ -22,6 +27,7 @@
   const $countryName = document.getElementById('country-name');
   const $capitalName = document.getElementById('capital-name');
   const $regionName = document.getElementById('region-name');
+  const $mapArea = document.getElementById('map-area');
   const $revealBtn = document.getElementById('reveal-btn');
   const $judgmentRow = document.getElementById('judgment-row');
   const $knownBtn = document.getElementById('known-btn');
@@ -49,6 +55,7 @@
     mode: 'all',
     reviewSet: new Set(),
     countriesLoaded: false,
+    mapSvgElement: null, // 挿入された <svg> 要素への参照
   };
 
   // ---------- データ読み込み ----------
@@ -186,15 +193,94 @@
     nextQuestion();
   }
 
+  // ---------- 世界地図 ----------
+  async function loadMapSvg() {
+    try {
+      const res = await fetch('./assets/world-map.svg', { cache: 'force-cache' });
+      if (!res.ok) throw new Error('world-map.svg の読み込みに失敗');
+      const text = await res.text();
+
+      // DOMParser で XML として安全に解析（innerHTML を使わない）
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(text, 'image/svg+xml');
+      const parseError = doc.querySelector('parsererror');
+      if (parseError) throw new Error('SVG パースエラー');
+
+      const svgEl = doc.documentElement;
+      if (!svgEl || svgEl.nodeName.toLowerCase() !== 'svg') {
+        throw new Error('SVG ルート要素が見つかりません');
+      }
+
+      // 念のため <script> や on* 属性を除去（防御的多層化）
+      svgEl.querySelectorAll('script').forEach(n => n.remove());
+      svgEl.querySelectorAll('*').forEach(el => {
+        for (const attr of Array.from(el.attributes)) {
+          if (attr.name.toLowerCase().startsWith('on')) {
+            el.removeAttribute(attr.name);
+          }
+        }
+      });
+
+      // 既存の中身をクリアして挿入
+      while ($mapArea.firstChild) $mapArea.removeChild($mapArea.firstChild);
+      $mapArea.appendChild(svgEl);
+      state.mapSvgElement = svgEl;
+    } catch (err) {
+      console.warn('地図の読み込みに失敗:', err);
+      $mapArea.classList.add('is-loading');
+      $mapArea.textContent = 'ちずを よみこめませんでした';
+    }
+  }
+
+  function highlightCountryOnMap(iso2) {
+    if (!state.mapSvgElement) return;
+    clearMapHighlight();
+
+    const path = state.mapSvgElement.querySelector('#' + CSS.escape(iso2));
+    if (!path) {
+      // SVG に該当 iso2 がない場合は何もしない（地図表示なしで他情報のみ表示）
+      return;
+    }
+    path.classList.add('is-selected');
+
+    // 小さい国は丸マーカーで補助強調
+    try {
+      const bbox = path.getBBox();
+      const area = bbox.width * bbox.height;
+      if (area > 0 && area < TINY_BBOX_AREA) {
+        const cx = bbox.x + bbox.width / 2;
+        const cy = bbox.y + bbox.height / 2;
+        const circle = document.createElementNS(SVG_NS, 'circle');
+        circle.setAttribute('cx', String(cx));
+        circle.setAttribute('cy', String(cy));
+        circle.setAttribute('r', String(MARKER_RADIUS));
+        circle.setAttribute('class', 'country-marker');
+        state.mapSvgElement.appendChild(circle);
+      }
+    } catch (_) {
+      // getBBox が使えない環境（極端に古いブラウザ）では、マーカー追加をスキップ
+    }
+  }
+
+  function clearMapHighlight() {
+    if (!state.mapSvgElement) return;
+    state.mapSvgElement.querySelectorAll('.is-selected').forEach(el => el.classList.remove('is-selected'));
+    state.mapSvgElement.querySelectorAll('.country-marker').forEach(el => el.remove());
+  }
+
   // ---------- メインフロー ----------
   function revealAnswer() {
     if (!state.current) return;
     $countryName.textContent = state.current.name;
     $capitalName.textContent = state.current.capital;
     $regionName.textContent = REGION_LABELS[state.current.region] || '';
+    // 先に表示状態にする（getBBox が非表示要素では 0 を返す Chrome 仕様への対策）
     $answerArea.hidden = false;
     $revealBtn.hidden = true;
     $judgmentRow.hidden = false;
+    // レイアウト強制反映してから地図ハイライト
+    void $mapArea.offsetWidth;
+    highlightCountryOnMap(state.current.iso2);
 
     $flag.classList.remove('is-pop');
     void $flag.offsetWidth;
@@ -213,6 +299,7 @@
     $countryName.textContent = '';
     $capitalName.textContent = '';
     $regionName.textContent = '';
+    clearMapHighlight();
     $revealBtn.hidden = false;
     $judgmentRow.hidden = true;
     $revealBtn.focus({ preventScroll: true });
@@ -313,7 +400,11 @@
     // 起動時はホーム画面を表示（カウントは「…」で開始）
     showHome();
 
-    await loadCountries();
+    // 国データと世界地図を並列で読み込み
+    await Promise.all([
+      loadCountries(),
+      loadMapSvg(),
+    ]);
 
     // 保存済み iso2 のうち未登録のものを除去（データ更新追従）
     const validIso2 = new Set(state.countries.map(c => c.iso2));
