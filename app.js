@@ -14,10 +14,22 @@
     'oceania': 'オセアニア',
   };
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  // bbox の面積がこの値以下なら、丸マーカーで強調表示する（viewBox 1010x666 上の単位）
-  // モバイル画面では小〜中の国でも視認しにくいので、ある程度大きめの閾値で多めにマーカー
-  const TINY_BBOX_AREA = 800;
-  const MARKER_RADIUS = 12;
+  // 元の世界地図 viewBox（SVG ファイルから読み取る基準値）
+  const WORLD_VIEWBOX = { x: 0, y: 0, width: 1010, height: 666 };
+  // マップ枠のアスペクト比（CSS の aspect-ratio と一致させる）
+  const MAP_ASPECT_RATIO = 1010 / 666;
+  // 地域 viewBox の余白（地域の幅・高さに対する割合）
+  const REGION_PADDING_RATIO = 0.06;
+  // 地域内で「小さい国」と判定する閾値（地域 viewBox 面積に対する国 bbox 面積の比）
+  const TINY_AREA_RATIO = 0.005;
+  // マーカー半径（地域 viewBox 幅に対する割合）
+  const MARKER_RADIUS_RATIO = 0.025;
+  // 地域 bbox 計算時に除外する外れ値カントリー（地理的に他の同地域国から極端に離れている）
+  // 例：ロシアはヨーロッパ region だが東端が極東まで届くため、除外しないとヨーロッパ全体が極端に広くなる
+  const REGION_BBOX_EXCLUDE = {
+    'europe': new Set(['ru']),     // ロシア（東端が極東まで）
+    'oceania': new Set(['ki']),    // キリバス（180度経線を跨いで両端に分布）
+  };
 
   // クイズ画面
   const $quizScreen = document.getElementById('quiz-screen');
@@ -56,6 +68,7 @@
     reviewSet: new Set(),
     countriesLoaded: false,
     mapSvgElement: null, // 挿入された <svg> 要素への参照
+    regionViewBoxes: {}, // 地域コード → {x, y, width, height} のキャッシュ
   };
 
   // ---------- データ読み込み ----------
@@ -232,33 +245,118 @@
     }
   }
 
+  // 地域に属する全カ国の union bbox を算出して、マップ枠のアスペクト比に拡張した viewBox を返す
+  function computeRegionViewBox(regionCode) {
+    if (state.regionViewBoxes[regionCode]) {
+      return state.regionViewBoxes[regionCode];
+    }
+    if (!state.mapSvgElement || state.countries.length === 0) {
+      return WORLD_VIEWBOX;
+    }
+
+    const excludeSet = REGION_BBOX_EXCLUDE[regionCode] || new Set();
+    const countriesInRegion = state.countries.filter(c => c.region === regionCode && !excludeSet.has(c.iso2));
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let pathFound = 0;
+
+    for (const c of countriesInRegion) {
+      const path = state.mapSvgElement.querySelector('#' + CSS.escape(c.iso2));
+      if (!path) continue;
+      try {
+        const bb = path.getBBox();
+        if (bb.width === 0 && bb.height === 0) continue;
+        if (bb.x < minX) minX = bb.x;
+        if (bb.y < minY) minY = bb.y;
+        if (bb.x + bb.width > maxX) maxX = bb.x + bb.width;
+        if (bb.y + bb.height > maxY) maxY = bb.y + bb.height;
+        pathFound++;
+      } catch (_) {}
+    }
+
+    if (pathFound === 0 || !isFinite(minX)) {
+      // 失敗時は世界全体をフォールバック
+      return WORLD_VIEWBOX;
+    }
+
+    let bx = minX;
+    let by = minY;
+    let bw = maxX - minX;
+    let bh = maxY - minY;
+
+    // 余白を加える（地域の幅/高さに対する割合）
+    const padX = Math.max(bw * REGION_PADDING_RATIO, 30);
+    const padY = Math.max(bh * REGION_PADDING_RATIO, 30);
+    bx -= padX;
+    by -= padY;
+    bw += padX * 2;
+    bh += padY * 2;
+
+    // マップ枠のアスペクト比に拡張（letterbox を避ける）
+    const bboxRatio = bw / bh;
+    if (bboxRatio < MAP_ASPECT_RATIO) {
+      // 枠が横長 > bbox 縦長：横方向に拡張
+      const newW = bh * MAP_ASPECT_RATIO;
+      bx -= (newW - bw) / 2;
+      bw = newW;
+    } else if (bboxRatio > MAP_ASPECT_RATIO) {
+      // 枠が縦長 > bbox 横長：縦方向に拡張
+      const newH = bw / MAP_ASPECT_RATIO;
+      by -= (newH - bh) / 2;
+      bh = newH;
+    }
+
+    const result = { x: bx, y: by, width: bw, height: bh };
+    state.regionViewBoxes[regionCode] = result;
+    return result;
+  }
+
   function highlightCountryOnMap(iso2) {
     if (!state.mapSvgElement) return;
     clearMapHighlight();
 
+    const country = state.countries.find(c => c.iso2 === iso2);
     const path = state.mapSvgElement.querySelector('#' + CSS.escape(iso2));
+
+    // 地域ズーム適用：region が判明していれば地域 viewBox に切替、なければ世界全体
+    // ロシアやキリバスのような外れ値の国は、地域全体に収まらないため世界全体表示にフォールバック
+    let viewBox = WORLD_VIEWBOX;
+    if (country && country.region) {
+      const excludeSet = REGION_BBOX_EXCLUDE[country.region];
+      if (excludeSet && excludeSet.has(iso2)) {
+        viewBox = WORLD_VIEWBOX;
+      } else {
+        viewBox = computeRegionViewBox(country.region);
+      }
+    }
+    state.mapSvgElement.setAttribute(
+      'viewBox',
+      `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`
+    );
+
     if (!path) {
-      // SVG に該当 iso2 がない場合は何もしない（地図表示なしで他情報のみ表示）
+      // SVG に該当 iso2 がない場合は viewBox 設定だけして終了
       return;
     }
     path.classList.add('is-selected');
 
-    // 小さい国は丸マーカーで補助強調
+    // ズーム対応マーカー：地域面積に対する国の相対面積で判定
     try {
       const bbox = path.getBBox();
-      const area = bbox.width * bbox.height;
-      if (area > 0 && area < TINY_BBOX_AREA) {
+      const countryArea = bbox.width * bbox.height;
+      const regionArea = viewBox.width * viewBox.height;
+      if (countryArea > 0 && regionArea > 0 && (countryArea / regionArea) < TINY_AREA_RATIO) {
         const cx = bbox.x + bbox.width / 2;
         const cy = bbox.y + bbox.height / 2;
+        const radius = viewBox.width * MARKER_RADIUS_RATIO;
         const circle = document.createElementNS(SVG_NS, 'circle');
         circle.setAttribute('cx', String(cx));
         circle.setAttribute('cy', String(cy));
-        circle.setAttribute('r', String(MARKER_RADIUS));
+        circle.setAttribute('r', String(radius));
         circle.setAttribute('class', 'country-marker');
         state.mapSvgElement.appendChild(circle);
       }
     } catch (_) {
-      // getBBox が使えない環境（極端に古いブラウザ）では、マーカー追加をスキップ
+      // getBBox が使えない環境ではマーカー追加をスキップ
     }
   }
 
